@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paymentify</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Paymentify">
+<meta name="theme-color" content="#ffffff">
+<style>
+:root{
+  --bg:#ffffff;--surface:#ffffff;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;
+  --accent:#2563eb;--accent-ink:#ffffff;--upi:#2563eb;--card:#7c3aed;--danger:#dc2626;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:linear-gradient(180deg,#eff6ff 0,#fff 280px) no-repeat,#fff;color:var(--ink);font:16px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+.wrap{max-width:520px;margin:0 auto;padding:18px 16px 96px}
+h1{font-size:26px;font-weight:800;line-height:1.2;margin:4px 0 16px;letter-spacing:-.3px}.top{display:flex;align-items:center;justify-content:space-between;margin:4px 0 16px}.top h1{margin:0}.brand{display:flex;align-items:center;gap:10px;min-width:0}.logo{width:44px;height:44px;border-radius:12px;box-shadow:0 3px 10px rgba(27,40,214,.25);flex:none}.sub{margin:-8px 0 16px;color:var(--muted)}#limitNote{margin-top:6px}.gear{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:20px;box-shadow:0 3px 10px rgba(17,24,39,.08);text-decoration:none;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+h2{font-size:17px;font-weight:600;line-height:1.2;margin:22px 0 10px}
+.bal{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.b{color:#fff;border-radius:20px;padding:16px;box-shadow:0 10px 22px rgba(37,99,235,.25)}
+.b small{color:rgba(255,255,255,.85);display:block;font-size:13px}
+.b .amt{font-size:24px;font-weight:700;line-height:1.2;margin:4px 0 8px;word-break:break-all}
+.b.upi{background:linear-gradient(135deg,#1d4ed8,#3b82f6)}.b.card{background:linear-gradient(135deg,#6d28d9,#a855f7);box-shadow:0 10px 22px rgba(124,58,237,.25)}
+.b.neg .amt{color:#fecaca}.b .link{color:#fff;background:rgba(255,255,255,.22);border-radius:999px;padding:5px 14px;font-size:14px}.b .primary{background:#fff;color:#111827;box-shadow:none}.b input{background:#fff}
+.link{background:none;border:0;color:var(--accent);font:inherit;font-weight:600;padding:4px 0;cursor:pointer}
+.edit{display:none;gap:6px;margin-top:6px}.edit.on{display:flex}
+.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 6px 20px rgba(17,24,39,.07)}
+label{display:block;font-size:14px;color:var(--muted);margin:12px 0 4px}
+input,select{width:100%;font:inherit;color:var(--ink);background:#f9fafb;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;height:48px;line-height:1.2;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0;min-height:1.2em}
+input[type=date]::-webkit-calendar-picker-indicator{margin:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#f3f4f6;border-radius:14px;padding:4px}
+.seg button{border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:10px;border-radius:9px;cursor:pointer}
+.seg button.on{background:#fff;color:var(--accent);box-shadow:0 1px 5px rgba(0,0,0,.14)}
+.primary{width:100%;margin-top:18px;border:0;background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;font:inherit;font-weight:700;padding:14px;border-radius:14px;cursor:pointer;box-shadow:0 6px 14px rgba(37,99,235,.3)}
+.small{width:auto;margin:0;padding:10px 14px}
+.hide{display:none}
+.item{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:0 3px 10px rgba(17,24,39,.05)}.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;background:linear-gradient(135deg,#1d4ed8,#3b82f6);flex:none}.av.card{background:linear-gradient(135deg,#6d28d9,#a855f7)}
+.item .t{flex:1;min-width:0}.item .n{font-weight:600}.item .m{font-size:13px;color:var(--muted)}
+.item .a{font-weight:700;white-space:nowrap;color:#dc2626}.item .a.cr{color:#16a34a}
+.x{border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px}
+.empty{color:var(--muted);text-align:center;padding:26px 8px}
+.total{color:var(--muted);font-size:14px;margin:0 0 10px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav .in{display:grid;grid-template-columns:1fr 1fr;width:100%;max-width:520px}
+nav a{text-align:center;padding:14px 8px;color:var(--muted);text-decoration:none;font-weight:600}
+nav a.on{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
+.toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+.toast{z-index:50}
+.dlg{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}.dlg.on{display:flex}
+.sheet{background:#fff;width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet .msg{font-size:17px;margin:0}.row{display:flex;gap:10px;margin-top:18px}.row .primary{margin:0;flex:1}
+.ghost{flex:1;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-weight:600;padding:14px;border-radius:14px;cursor:pointer}
+.item[data-id]{cursor:pointer}
+.hh{display:flex;justify-content:space-between;align-items:center}
+.login{position:fixed;inset:0;background:#fff;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}.login.hide{display:none}.lbox{max-width:360px;width:100%}
+.gbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #d1d5db;background:#fff;color:#111827;font:inherit;font-weight:600;padding:13px;border-radius:14px;cursor:pointer;box-shadow:0 2px 8px rgba(17,24,39,.08)}.gbtn b{color:#4285f4;font-size:20px}.chev{color:var(--muted);font-size:24px;line-height:1}.del{color:var(--danger);display:block;width:100%;text-align:center;margin-top:14px}
+.mh{display:flex;justify-content:space-between;align-items:baseline;margin:20px 2px 8px;font-weight:700;font-size:17px}.mh span+span{font-weight:500;font-size:13px;color:var(--muted)}.mh:first-child{margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><div class="brand"><h1 id="title">My money</h1></div><a class="gear" href="#settings" aria-label="Settings">⚙</a></header>
+  <section id="home">
+    <p class="sub">Track every rupee</p>
+    <div class="bal">
+      <div class="b upi" id="bUpi">
+        <small>Salary balance (UPI)</small>
+        <div class="amt" id="vUpi">₹0</div>
+        <button class="link" data-edit="upi">+ Add salary</button>
+        <div class="edit" id="eUpi"><input type="number" inputmode="decimal" id="iUpi" placeholder="Amount" aria-label="Salary amount"><button class="primary small" data-save="upi">Add</button></div>
+      </div>
+      <div class="b card" id="bCard">
+        <small>Axis card balance</small>
+        <div class="amt" id="vCard">₹0</div>
+        <button class="link" id="payBill" type="button">Pay card bill</button>
+        <small id="limitNote"></small>
+      </div>
+    </div>
+
+    <h2>New payment</h2>
+    <div class="panel">
+      <div class="seg" role="tablist">
+        <button id="mUpi" class="on" type="button">UPI</button>
+        <button id="mCard" type="button">Axis card</button>
+      </div>
+      <div id="appRow">
+        <label for="app">UPI app</label>
+        <select id="app"><option>BHIM</option><option>PhonePe</option><option>GPay</option><option>Paytm</option></select>
+      </div>
+      <label for="name">Payment name</label>
+      <input id="name" placeholder="Grocery, fuel, rent…" maxlength="60">
+      <label for="amount">Amount (₹)</label>
+      <input id="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+      <button class="primary" id="add" type="button">Add payment</button>
+    </div>
+  </section>
+
+  <section id="history" class="hide">
+    <div class="seg" role="tablist">
+      <button id="hUpi" class="on" type="button">UPI</button>
+      <button id="hCard" type="button">Axis card</button>
+    </div>
+    <div class="hh"><h2 id="hTitle">UPI payments</h2><button class="link" id="exportBtn" type="button">Export</button></div>
+    <p class="total" id="hTotal"></p>
+    <div id="list"></div>
+  </section>
+
+  <section id="settings" class="hide">
+    <div class="panel">
+      <label for="sSal">Salary balance, UPI (₹)</label>
+      <input id="sSal" type="number" inputmode="decimal">
+      <label for="sCard">Axis card balance (₹)</label>
+      <input id="sCard" type="number" inputmode="decimal">
+      <label for="sLimit">Card limit: balance after paying the bill (₹)</label>
+      <input id="sLimit" type="number" inputmode="decimal">
+      <button class="primary" id="saveSet" type="button">Save settings</button>
+    </div>
+    <p class="total" style="margin-top:12px">Balances can only be changed here. Add salary and pay the card bill from Home.</p>
+    <h2>Account</h2>
+    <div class="panel">
+      <p class="total" style="margin:0" id="acctInfo">Not signed in. Data is saved on this device only.</p>
+      <button class="ghost" style="width:100%;margin-top:12px" id="acctBtn" type="button">Sign in with Google</button>
+    </div>
+    <h2>Backup &amp; restore</h2>
+    <div class="panel">
+      <p class="total" style="margin:0">Save your data to a file, then restore it on another phone or browser.</p>
+      <button class="primary" id="bkDown" type="button">Download backup file</button>
+      <div class="row"><button class="ghost" id="bkCopy" type="button">Copy as text</button><button class="ghost" id="bkRestore" type="button">Restore</button></div>
+    </div>
+  </section>
+</div>
+
+<nav><div class="in"><a href="#home" id="nHome" class="on">Home</a><a href="#history" id="nHist">History</a></div></nav>
+<div class="toast" id="toast"></div>
+<div class="login hide" id="login"><div class="lbox">
+  <img src="paymentify-icon.PNG" alt="Paymentify" width="96" height="96" style="border-radius:22px">
+  <h1 style="margin:14px 0 6px">Paymentify</h1>
+  <p class="sub" style="margin:0 0 22px">Sign in to keep your data safe and use it on any phone.</p>
+  <div id="lBtns" class="hide">
+    <button class="gbtn" id="gSign" type="button"><b>G</b>Sign in with Google</button>
+    <button class="link" id="skip" type="button" style="margin-top:10px">Use on this device only</button>
+  </div>
+  <p class="total" id="lMsg"></p>
+</div></div>
+<div class="dlg" id="dlg"><div class="sheet" id="sheet"></div></div>
+
+<script>
+(function(){
+  var KEY='expense-tracker-v1';
+  var state={balances:{upi:0,card:17000},limit:17000,payments:[]};
+  try{var s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.balances&&Array.isArray(s.payments))state=s;}catch(e){}
+  if(typeof state.limit!=='number')state.limit=17000;
+  function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+  function save(){state.updatedAt=Date.now();persist();if(window.PM&&PM.onSave)PM.onSave(state);}
+  var $=function(id){return document.getElementById(id)};
+  var mode='upi',hist='upi';
+  function inr(n){return '₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});}
+  function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+  function today(){var d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
+  function toast(m){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(function(){t.classList.remove('on')},1800);}
+
+  function renderBal(){
+    if(state.balances.card>state.limit){state.balances.card=state.limit;save();}
+    $('vUpi').textContent=inr(state.balances.upi);
+    $('vCard').textContent=inr(state.balances.card);
+    $('bUpi').classList.toggle('neg',state.balances.upi<0);
+    $('bCard').classList.toggle('neg',state.balances.card<0);
+    $('limitNote').textContent='Resets to '+inr(state.limit)+' after paying the bill';
+  }
+  function renderHist(){
+    var isU=hist==='upi';
+    $('hUpi').classList.toggle('on',isU);$('hCard').classList.toggle('on',!isU);
+    $('hTitle').textContent=isU?'UPI payments':'Axis card payments';
+    var rows=state.payments.filter(function(p){return p.mode===hist}).sort(function(a,b){return b.date.localeCompare(a.date)||b.id-a.id});
+    var sum=rows.reduce(function(t,p){return p.type?t:t+p.amount},0);
+    var tot={},lastM='';rows.forEach(function(p){var k=p.date.slice(0,7);if(!p.type)tot[k]=(tot[k]||0)+p.amount;});
+    $('hTotal').textContent=rows.length?(rows.length?'Grouped by month. Tap an entry to edit.':''):'';
+    $('list').innerHTML=rows.length?rows.map(function(p){
+      var mk=p.date.slice(0,7),hd='';
+      if(mk!==lastM){lastM=mk;hd='<div class="mh"><span>'+new Date(mk+'-01T00:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'})+'</span><span>'+inr(tot[mk]||0)+' spent</span></div>';}
+      var d=new Date(p.date+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+      var meta=d+(p.app?' · '+esc(p.app):'');var cr=p.type==='credit'||p.type==='bill';
+      return hd+'<div class="item" data-id="'+p.id+'"><div class="av '+hist+'">'+esc(p.name.charAt(0).toUpperCase())+'</div><div class="t"><div class="n">'+esc(p.name)+'</div><div class="m">'+meta+'</div></div><div class="a'+(cr?' cr':'')+'">'+(cr?'+':'−')+inr(p.amount)+'</div>'+'<span class="chev">›</span>'+'</div>';
+    }).join(''):'<div class="empty">No '+(isU?'UPI':'card')+' payments yet. Add one from Home.</div>';
+  }
+  function sheet(h){$('sheet').innerHTML=h;$('dlg').classList.add('on');}
+  function closeSheet(){$('dlg').classList.remove('on');}
+  function ask(msg,ok,fn){sheet('<p class="msg">'+esc(msg)+'</p><div class="row"><button class="ghost" id="no" type="button">Cancel</button><button class="primary" id="yes" type="button">'+ok+'</button></div>');$('no').onclick=closeSheet;$('yes').onclick=function(){closeSheet();fn();};}
+  function attr(t){return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+  function editEntry(id){
+    var p=state.payments.filter(function(x){return x.id===id})[0];if(!p)return;
+    var bill=p.type==='bill',dis=bill?' disabled':'';
+    sheet('<h2 style="margin:0">Edit entry</h2><label for="eN">Name</label><input id="eN" maxlength="60" value="'+attr(p.name)+'"'+dis+'><label for="eA">Amount (₹)</label><input id="eA" type="number" inputmode="decimal" value="'+p.amount+'"'+dis+'><label for="eD">Date</label><input id="eD" type="date" value="'+p.date+'"><div class="row"><button class="ghost" id="no" type="button">Cancel</button><button class="primary" id="yes" type="button">Save</button></div><button class="link del" id="delBtn" type="button">Delete this entry</button>');
+    $('no').onclick=closeSheet;
+    $('delBtn').onclick=function(){
+      ask('Delete "'+p.name+'"? '+(bill?'Your card balance will not change.':'Your balance will be adjusted.'),'Delete',function(){
+        if(!bill)state.balances[p.mode]+=(p.type==='credit'?-p.amount:p.amount);
+        state.payments=state.payments.filter(function(x){return x.id!==p.id});
+        save();renderBal();renderHist();toast('Entry deleted');
+      });
+    };
+    $('yes').onclick=function(){
+      var n=$('eN').value.trim(),a=parseFloat($('eA').value),d=$('eD').value;
+      if(!n||isNaN(a)||a<=0||!d){toast('Fill in name, amount and date');return;}
+      if(!bill){state.balances[p.mode]+=(p.type==='credit'?a-p.amount:p.amount-a);}
+      p.name=n;p.amount=a;p.date=d;
+      save();renderBal();renderHist();closeSheet();toast('Entry updated');
+    };
+  }
+  function exportSheet(){
+    var d=today(),first=d.slice(0,8)+'01';
+    sheet('<h2 style="margin:0">Export history</h2><label for="xM">Include</label><select id="xM"><option value="both">UPI and card</option><option value="upi">UPI only</option><option value="card">Axis card only</option></select><label for="xF">From</label><input id="xF" type="date" value="'+first+'"><label for="xT">To</label><input id="xT" type="date" value="'+d+'"><p class="total" id="xC" style="margin:12px 0 0"></p><div class="row"><button class="ghost" id="no" type="button">Close</button><button class="primary" id="yes" type="button">Download CSV</button></div><button class="link del" style="color:var(--accent)" id="xCopy" type="button">Copy as text instead</button>');
+    var sel=function(){var m=$('xM').value,f=$('xF').value,t=$('xT').value;return state.payments.filter(function(p){return (m==='both'||p.mode===m)&&(!f||p.date>=f)&&(!t||p.date<=t)}).sort(function(a,b){return a.date.localeCompare(b.date)||a.id-b.id});};
+    var upd=function(){$('xC').textContent=sel().length+' entries selected'};
+    ['xM','xF','xT'].forEach(function(i){$(i).onchange=upd;$(i).oninput=upd});upd();
+    var build=function(rows){
+      var q=function(v){v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+      return ['Date,Mode,UPI app,Type,Name,Amount'].concat(rows.map(function(p){
+        return [p.date,p.mode==='upi'?'UPI':'Axis card',p.app||'',p.type==='credit'?'Credit':p.type==='bill'?'Bill paid':'Expense',p.name,(p.type?'':'-')+p.amount].map(q).join(',');
+      })).join('\n');
+    };
+    $('no').onclick=closeSheet;
+    $('yes').onclick=function(){
+      var rows=sel();if(!rows.length){toast('No entries in this range');return;}
+      try{
+        var blob=new Blob(['\ufeff'+build(rows)],{type:'text/csv;charset=utf-8'});
+        var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+        a.download='paymentify-'+$('xF').value+'-to-'+$('xT').value+'.csv';
+        document.body.appendChild(a);a.click();a.remove();
+        toast('Exported '+rows.length+' entries');
+      }catch(e){toast('Download not supported here');}
+    };
+    $('xCopy').onclick=function(){
+      var rows=sel();if(!rows.length){toast('No entries in this range');return;}
+      try{navigator.clipboard.writeText(build(rows)).then(function(){toast('Copied '+rows.length+' entries')},function(){toast('Copy not allowed here')});}
+      catch(e){toast('Copy not allowed here');}
+    };
+  }
+  function setMode(m){mode=m;$('mUpi').classList.toggle('on',m==='upi');$('mCard').classList.toggle('on',m==='card');$('appRow').classList.toggle('hide',m!=='upi');}
+  function route(){
+    var h=location.hash==='#history'?'history':location.hash==='#settings'?'settings':'home';
+    ['home','history','settings'].forEach(function(s){$(s).classList.toggle('hide',h!==s)});
+    $('nHome').classList.toggle('on',h==='home');$('nHist').classList.toggle('on',h==='history');
+    $('title').textContent=h==='history'?'Payment history':h==='settings'?'Settings':'My money';
+    if(h==='history')renderHist();
+    if(h==='settings'){$('sSal').value=state.balances.upi;$('sCard').value=state.balances.card;$('sLimit').value=state.limit;}
+    window.scrollTo(0,0);
+  }
+
+  $('mUpi').onclick=function(){setMode('upi')};
+  $('mCard').onclick=function(){setMode('card')};
+  $('hUpi').onclick=function(){hist='upi';renderHist()};
+  $('hCard').onclick=function(){hist='card';renderHist()};
+
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    if(t.closest){var it=t.closest('.item');if(it&&!t.getAttribute('data-del')){editEntry(Number(it.getAttribute('data-id')));return;}}
+    var ed=t.getAttribute&&t.getAttribute('data-edit');
+    if(ed){$('eUpi').classList.toggle('on');$('iUpi').value='';$('iUpi').focus();return;}
+    var sv=t.getAttribute&&t.getAttribute('data-save');
+    if(sv){var v=parseFloat($('iUpi').value);
+      if(isNaN(v)||v<=0){toast('Enter an amount above 0');return;}
+      state.balances.upi+=v;state.payments.push({id:Date.now(),mode:'upi',type:'credit',app:'',name:'Salary credited',amount:v,date:today()});
+      save();renderBal();$('eUpi').classList.remove('on');toast('Money added');return;}
+    var del=t.getAttribute&&t.getAttribute('data-del');
+    if(del){var id=Number(del);var p=state.payments.filter(function(x){return x.id===id})[0];
+      if(p){ask('Delete "'+p.name+'"? '+(p.type==='bill'?'Your card balance will not change.':'Your balance will be adjusted.'),'Delete',function(){
+        if(p.type!=='bill')state.balances[p.mode]+=(p.type==='credit'?-p.amount:p.amount);state.payments=state.payments.filter(function(x){return x.id!==id});
+        save();renderBal();renderHist();toast('Payment deleted');});}
+    }
+  });
+
+  $('add').onclick=function(){
+    var name=$('name').value.trim(),amt=parseFloat($('amount').value);
+    if(!name){toast('Name the payment');$('name').focus();return;}
+    if(isNaN(amt)||amt<=0){toast('Enter an amount above 0');$('amount').focus();return;}
+    state.payments.push({id:Date.now(),mode:mode,app:mode==='upi'?$('app').value:'',name:name,amount:amt,date:today()});
+    state.balances[mode]-=amt;
+    save();renderBal();
+    $('name').value='';$('amount').value='';
+    toast('Payment added');
+  };
+
+  function backupText(){return JSON.stringify({app:'paymentify',version:1,exported:today(),balances:state.balances,limit:state.limit,payments:state.payments},null,1);}
+  $('bkDown').onclick=function(){
+    try{var blob=new Blob([backupText()],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='paymentify-backup-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();toast('Backup downloaded');}
+    catch(e){toast('Download not supported here');}
+  };
+  $('bkCopy').onclick=function(){
+    try{navigator.clipboard.writeText(backupText()).then(function(){toast('Backup copied')},function(){toast('Copy not allowed here')});}
+    catch(e){toast('Copy not allowed here');}
+  };
+  function applyBackup(txt){
+    var d;try{d=JSON.parse(txt);}catch(e){toast('That is not a valid backup');return;}
+    var ok=d&&d.balances&&typeof d.balances.upi==='number'&&typeof d.balances.card==='number'&&Array.isArray(d.payments)&&d.payments.every(function(p){return p&&typeof p.amount==='number'&&typeof p.name==='string'&&typeof p.date==='string'&&(p.mode==='upi'||p.mode==='card')});
+    if(!ok){toast('That is not a valid backup');return;}
+    ask('Replace the data on this device with the backup ('+d.payments.length+' entries)?','Restore',function(){
+      state={balances:{upi:d.balances.upi,card:d.balances.card},limit:typeof d.limit==='number'?d.limit:17000,payments:d.payments.map(function(p,i){var q=Object.assign({},p);if(typeof q.id!=='number')q.id=Date.now()+i;return q;})};
+      save();renderBal();renderHist();
+      $('sSal').value=state.balances.upi;$('sCard').value=state.balances.card;$('sLimit').value=state.limit;
+      toast('Backup restored');
+    });
+  }
+  $('bkRestore').onclick=function(){
+    sheet('<h2 style="margin:0">Restore backup</h2><label for="rF">Choose backup file</label><input id="rF" type="file" accept=".json,application/json"><label for="rT">Or paste backup text</label><textarea id="rT" rows="4" style="width:100%;font:inherit;background:#f9fafb;border:1px solid var(--line);border-radius:12px;padding:10px"></textarea><div class="row"><button class="ghost" id="no" type="button">Cancel</button><button class="primary" id="yes" type="button">Restore</button></div>');
+    $('no').onclick=closeSheet;
+    $('yes').onclick=function(){
+      var f=$('rF').files&&$('rF').files[0];
+      if(f){var r=new FileReader();r.onload=function(){closeSheet();applyBackup(String(r.result));};r.onerror=function(){toast('Could not read file');};r.readAsText(f);return;}
+      var t=$('rT').value.trim();if(!t){toast('Choose a file or paste the text');return;}
+      closeSheet();applyBackup(t);
+    };
+  };
+  $('exportBtn').onclick=exportSheet;
+  $('payBill').onclick=function(){
+    var due=state.limit-state.balances.card;
+    if(due<=0){toast('No card bill due');return;}
+    ask('Pay card bill of '+inr(due)+'? Card balance resets to '+inr(state.limit)+'.','Pay bill',function(){
+    state.payments.push({id:Date.now(),mode:'card',type:'bill',app:'',name:'Card bill paid',amount:due,date:today()});
+    state.balances.card=state.limit;save();renderBal();toast('Card bill paid');});
+  };
+  $('saveSet').onclick=function(){
+    var a=parseFloat($('sSal').value),c=parseFloat($('sCard').value),l=parseFloat($('sLimit').value);
+    if(isNaN(a)||isNaN(c)||isNaN(l)||l<0){toast('Enter valid amounts');return;}
+    if(c>l){toast('Card balance can’t be above the limit');return;}
+    state.balances.upi=a;state.balances.card=c;state.limit=l;save();renderBal();toast('Settings saved');
+  };
+
+  window.PM=window.PM||{};
+  PM.get=function(){return state};
+  PM.persist=persist;
+  PM.apply=function(s){state=s;if(typeof state.limit!=='number')state.limit=17000;persist();renderBal();renderHist();$('sSal').value=state.balances.upi;$('sCard').value=state.balances.card;$('sLimit').value=state.limit;};
+  PM.reset=function(){state={balances:{upi:0,card:17000},limit:17000,payments:[]};try{localStorage.removeItem(KEY);}catch(e){}renderBal();renderHist();};
+  PM.sheet=sheet;PM.close=closeSheet;PM.toast=toast;PM.ask=ask;
+  window.addEventListener('hashchange',route);
+  renderBal();route();
+})();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+<script type="module" src="cloud.js"></script>
+</body>
+</html>
