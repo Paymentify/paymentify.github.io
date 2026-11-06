@@ -1,4 +1,4 @@
-const CACHE = 'paymentify-v2';
+const CACHE = 'paymentify-v3';
 const FILES = ['./', 'index.html', 'cloud.js', 'firebase-config.js', 'manifest.webmanifest', 'favicon.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'paymentify-icon.PNG'];
 const SDK = ['app', 'auth', 'firestore'].map(function (n) { return 'https://www.gstatic.com/firebasejs/10.14.1/firebase-' + n + '.js'; });
 

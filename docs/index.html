@@ -219,9 +219,120 @@ nav a.on{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
       save();renderBal();renderHist();closeSheet();toast('Entry updated');
     };
   }
+  function fmt(n){return String(Math.round(n*100)/100);}
+  var HW=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+  function clean(s){return String(s).replace(/[^\x20-\x7e]/g,'?');}
+  function pw(s,size,bold){var w=0;for(var i=0;i<s.length;i++){var c=s.charCodeAt(i)-32;w+=(HW[c]!==undefined?HW[c]:556);}return w*size/1000*(bold?1.07:1);}
+  function wrapItems(items,w,size){
+    var lines=[],cur='';
+    items.forEach(function(raw,i){
+      var it=clean(raw)+(i<items.length-1?',':'');
+      var test=cur?cur+' '+it:it;
+      if(pw(test,size)<=w){cur=test;return;}
+      if(cur){lines.push(cur);cur='';}
+      while(pw(it,size)>w&&it.length>1){var k=it.length;while(k>1&&pw(it.slice(0,k),size)>w)k--;lines.push(it.slice(0,k));it=it.slice(k);}
+      cur=it;
+    });
+    if(cur)lines.push(cur);
+    return lines;
+  }
+  function makePdf(secs,meta){
+    var W=595,H=842,M=40,cols=[120,285,110],CW=cols[0]+cols[1]+cols[2],pages=[],ops,y;
+    function newPage(){ops=[];pages.push(ops);y=M;}
+    function pe(s){return clean(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');}
+    function text(s,x,yTop,size,bold,c){ops.push('BT /'+(bold?'F2':'F1')+' '+size+' Tf '+c.join(' ')+' rg '+x.toFixed(2)+' '+(H-yTop).toFixed(2)+' Td ('+pe(s)+') Tj ET');}
+    function fill(x,yTop,w,h,c){ops.push(c.join(' ')+' rg '+x+' '+(H-yTop-h)+' '+w+' '+h+' re f');}
+    function box(x,yTop,w,h){ops.push('0.72 G 0.6 w '+x+' '+(H-yTop-h)+' '+w+' '+h+' re S');}
+    function header(){
+      var h=22,x=M;fill(M,y,CW,h,[0.93,0.94,0.97]);
+      ['CREDIT','DEBIT','Now'].forEach(function(t,i){box(x,y,cols[i],h);text(t,x+7,y+15,10,true,[0.12,0.12,0.16]);x+=cols[i];});
+      y+=h;
+    }
+    function row(credit,debits,now){
+      var size=10,lh=14,pad=7;
+      var cl=wrapItems([credit],cols[0]-2*pad,size),dl=wrapItems(debits,cols[1]-2*pad,size),nl=wrapItems([now],cols[2]-2*pad,size);
+      var n=Math.max(cl.length,dl.length,nl.length,1),rh=n*lh+2*pad;
+      if(y+rh>H-M-16){newPage();header();}
+      var x=M;
+      [[cl,[0.05,0.5,0.32],false],[dl,[0.15,0.15,0.18],false],[nl,[0.08,0.2,0.6],true]].forEach(function(c,i){
+        box(x,y,cols[i],rh);
+        c[0].forEach(function(l,j){text(l,x+pad,y+pad+10+j*lh,size,c[2],c[1]);});
+        x+=cols[i];
+      });
+      y+=rh;
+    }
+    newPage();
+    text('Paymentify',M,y+16,20,true,[0.1,0.2,0.6]);y+=26;
+    text(meta,M,y+9,9,false,[0.4,0.4,0.45]);y+=24;
+    secs.forEach(function(t){
+      if(y+22+22+30+40>H-M)newPage();
+      text(t.title,M,y+12,13,true,[0.1,0.1,0.14]);y+=20;
+      header();
+      row('Opening '+fmt(t.opening),[],fmt(t.opening));
+      t.weeks.forEach(function(w){row(w.credit,w.debits,w.now);});
+      y+=20;
+    });
+    pages.forEach(function(p,i){ops=p;text('Page '+(i+1)+' of '+pages.length,W/2-25,H-22,8,false,[0.5,0.5,0.55]);});
+    var objs=[],kids=[];
+    pages.forEach(function(p,i){kids.push((5+i*2)+' 0 R');});
+    objs.push('<< /Type /Catalog /Pages 2 0 R >>');
+    objs.push('<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+pages.length+' >>');
+    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    pages.forEach(function(p,i){
+      var s=p.join('\n');
+      objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents '+(6+i*2)+' 0 R >>');
+      objs.push('<< /Length '+s.length+' >>\nstream\n'+s+'\nendstream');
+    });
+    var out='%PDF-1.4\n',offs=[];
+    objs.forEach(function(o,i){offs.push(out.length);out+=(i+1)+' 0 obj\n'+o+'\nendobj\n';});
+    var xr=out.length;
+    out+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';
+    offs.forEach(function(o){out+=('0000000000'+o).slice(-10)+' 00000 n \n';});
+    out+='trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xr+'\n%%EOF';
+    return new Blob([out],{type:'application/pdf'});
+  }
+  function savePdf(blob,name){
+    var file=null;try{file=new File([blob],name,{type:'application/pdf'});}catch(e){}
+    try{
+      if(file&&navigator.canShare&&navigator.canShare({files:[file]})&&window.matchMedia('(pointer:coarse)').matches){navigator.share({files:[file],title:name}).catch(function(){});return;}
+    }catch(e){}
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+  }
+  function exportPdf(mode,from,to){
+    var MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var names={upi:'UPI',card:'Axis card'},modes=mode==='both'?['upi','card']:[mode],secs=[],td=today();
+    function z(n){return n<10?'0'+n:''+n;}
+    modes.forEach(function(m){
+      var all=state.payments.filter(function(p){return p.mode===m;}).sort(function(a,b){return a.date.localeCompare(b.date)||a.id-b.id;});
+      if(!all.length)return;
+      var bNow=state.balances[m];
+      var bal=function(d){var b=bNow;all.forEach(function(p){if(p.date>d)b-=(p.type?p.amount:-p.amount);});return b;};
+      var lo=from||all[0].date,hi=to||td;
+      var y=+lo.slice(0,4),mo=+lo.slice(5,7),ey=+hi.slice(0,4),em=+hi.slice(5,7);
+      while(y<ey||(y===ey&&mo<=em)){
+        var ym=y+'-'+z(mo),days=new Date(y,mo,0).getDate(),weeks=[],any=false;
+        var rg=[[1,7],[8,14],[15,21],[22,28]];if(days>28)rg.push([29,days]);
+        rg.forEach(function(r,i){
+          var ws=ym+'-'+z(r[0]),we=ym+'-'+z(r[1]);
+          var es=all.filter(function(p){return p.date>=ws&&p.date<=we&&p.date>=lo&&p.date<=hi;});
+          if(es.length)any=true;
+          var cr=es.filter(function(p){return p.type;}).map(function(p){return fmt(p.amount);}).join('+');
+          var db=es.filter(function(p){return !p.type;}).map(function(p){return p.name+fmt(p.amount);});
+          weeks.push({credit:cr+':W'+(i+1),debits:db,now:ws>td?'-':fmt(bal(we))});
+        });
+        if(any)secs.push({title:names[m]+' - '+MN[mo-1]+' '+y,opening:bal(ym+'-00'),weeks:weeks});
+        mo++;if(mo>12){mo=1;y++;}
+      }
+    });
+    if(!secs.length){toast('No entries in this range');return;}
+    var lo2=from||'start',hi2=to||td;
+    savePdf(makePdf(secs,'Period: '+(from||'beginning')+' to '+hi2+'     Generated: '+td),'paymentify-'+lo2+'-to-'+hi2+'.pdf');
+    toast('PDF ready');
+  }
   function exportSheet(){
     var d=today(),first=d.slice(0,8)+'01';
-    sheet('<h2 style="margin:0">Export history</h2><label for="xM">Include</label><select id="xM"><option value="both">UPI and card</option><option value="upi">UPI only</option><option value="card">Axis card only</option></select><label for="xF">From</label><input id="xF" type="date" value="'+first+'"><label for="xT">To</label><input id="xT" type="date" value="'+d+'"><p class="total" id="xC" style="margin:12px 0 0"></p><div class="row"><button class="ghost" id="no" type="button">Close</button><button class="primary" id="yes" type="button">Download CSV</button></div><button class="link del" style="color:var(--accent)" id="xCopy" type="button">Copy as text instead</button>');
+    sheet('<h2 style="margin:0">Export history</h2><label for="xM">Include</label><select id="xM"><option value="both">UPI and card</option><option value="upi">UPI only</option><option value="card">Axis card only</option></select><label for="xFmt">Format</label><select id="xFmt"><option value="pdf">PDF (weekly summary)</option><option value="csv">CSV (spreadsheet)</option></select><label for="xF">From</label><input id="xF" type="date" value="'+first+'"><label for="xT">To</label><input id="xT" type="date" value="'+d+'"><p class="total" id="xC" style="margin:12px 0 0"></p><div class="row"><button class="ghost" id="no" type="button">Close</button><button class="primary" id="yes" type="button">Download</button></div><button class="link del" style="color:var(--accent)" id="xCopy" type="button">Copy CSV text instead</button>');
     var sel=function(){var m=$('xM').value,f=$('xF').value,t=$('xT').value;return state.payments.filter(function(p){return (m==='both'||p.mode===m)&&(!f||p.date>=f)&&(!t||p.date<=t)}).sort(function(a,b){return a.date.localeCompare(b.date)||a.id-b.id});};
     var upd=function(){$('xC').textContent=sel().length+' entries selected'};
     ['xM','xF','xT'].forEach(function(i){$(i).onchange=upd;$(i).oninput=upd});upd();
@@ -234,6 +345,7 @@ nav a.on{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
     $('no').onclick=closeSheet;
     $('yes').onclick=function(){
       var rows=sel();if(!rows.length){toast('No entries in this range');return;}
+      if($('xFmt').value==='pdf'){exportPdf($('xM').value,$('xF').value,$('xT').value);return;}
       try{
         var blob=new Blob(['\ufeff'+build(rows)],{type:'text/csv;charset=utf-8'});
         var a=document.createElement('a');a.href=URL.createObjectURL(blob);
