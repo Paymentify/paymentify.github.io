@@ -1,4 +1,4 @@
-const CACHE = 'paymentify-v3';
+const CACHE = 'paymentify-v4';
 const FILES = ['./', 'index.html', 'cloud.js', 'firebase-config.js', 'manifest.webmanifest', 'favicon.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'paymentify-icon.PNG'];
 const SDK = ['app', 'auth', 'firestore'].map(function (n) { return 'https://www.gstatic.com/firebasejs/10.14.1/firebase-' + n + '.js'; });
 
@@ -18,18 +18,31 @@ self.addEventListener('activate', function (e) {
   );
 });
 
-// Cache first (works offline); refresh in the background when online.
+// Own files: network first (so updates show right away), cache as the offline fallback.
+// Firebase library files: cache first.
 self.addEventListener('fetch', function (e) {
   var req = e.request, u = new URL(req.url);
-  var ok = u.origin === self.location.origin || u.hostname === 'www.gstatic.com';
-  if (req.method !== 'GET' || !ok || u.pathname.indexOf('/__/') === 0) return;
-  e.respondWith(
-    caches.match(req, { ignoreSearch: true }).then(function (hit) {
-      var net = fetch(req).then(function (res) {
-        if (res && res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
-        return res;
-      }).catch(function () { return hit || caches.match('index.html'); });
-      return hit || net;
-    })
-  );
+  var same = u.origin === self.location.origin;
+  if (req.method !== 'GET' || !(same || u.hostname === 'www.gstatic.com') || u.pathname.indexOf('/__/') === 0) return;
+  if (same) {
+    var net = fetch(req.url, { cache: 'no-cache' }).then(function (res) {
+      if (res && res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
+      return res;
+    });
+    var wait = new Promise(function (_, reject) { setTimeout(reject, 4000); });
+    e.respondWith(
+      Promise.race([net, wait]).catch(function () {
+        return caches.match(req, { ignoreSearch: true }).then(function (hit) { return hit || net.catch(function () { return caches.match('index.html'); }); });
+      })
+    );
+  } else {
+    e.respondWith(
+      caches.match(req).then(function (hit) {
+        return hit || fetch(req).then(function (res) {
+          if (res && res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
+          return res;
+        });
+      })
+    );
+  }
 });
