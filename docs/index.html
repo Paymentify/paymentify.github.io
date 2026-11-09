@@ -77,6 +77,8 @@ nav a.on{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
 nav{z-index:10}nav .in{grid-template-columns:1fr 1fr 80px 1fr 1fr;align-items:end}nav a{font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px}nav a i{font-style:normal;font-size:20px;line-height:1.1}
 .fab{width:62px;height:62px;border-radius:50%;border:0;margin:0 auto 14px;background:linear-gradient(135deg,#6d6bff,#22b8f0);color:#fff;font-size:34px;line-height:1;box-shadow:0 8px 22px rgba(80,120,255,.5);cursor:pointer;transform:translateY(-6px)}
 .sheet{max-height:92vh;overflow:auto}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}.st{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}.st small{color:var(--muted);display:block}.st b{display:block;font-size:20px;margin-top:4px;overflow-wrap:anywhere}.up{color:#fb7185}.dn{color:#4ade80}
+.srch{display:flex;gap:10px;margin:14px 0 0}.srch input{flex:1;min-width:0}.fbtn{flex:none;width:auto;padding:0 16px;white-space:nowrap}
 .mh{display:flex;justify-content:space-between;align-items:baseline;margin:20px 2px 8px;font-weight:700;font-size:17px}.mh span+span{font-weight:500;font-size:13px;color:var(--muted)}.mh:first-child{margin-top:4px}
 </style>
 </head>
@@ -124,11 +126,18 @@ nav{z-index:10}nav .in{grid-template-columns:1fr 1fr 80px 1fr 1fr;align-items:en
     </div></div></div>
   </section>
 
+  <section id="insights" class="hide">
+    <div class="stats" id="stats"></div>
+    <h3 class="sec">Last 6 months</h3><div class="panel bars" id="trend"></div>
+    <h3 class="sec">Biggest expenses</h3><div id="top"></div>
+  </section>
+
   <section id="history" class="hide">
     <div class="seg" role="tablist">
       <button id="hUpi" class="on" type="button">UPI</button>
       <button id="hCard" type="button">Axis card</button>
     </div>
+    <div class="srch"><input id="hq" type="search" placeholder="Search payments…"><button class="ghost fbtn" id="hFilter" type="button">Filter<span id="fCnt"></span></button></div>
     <div class="hh"><h2 id="hTitle">UPI payments</h2><button class="link" id="exportBtn" type="button">Export</button></div>
     <p class="total" id="hTotal"></p>
     <div id="list"></div>
@@ -195,23 +204,47 @@ nav{z-index:10}nav .in{grid-template-columns:1fr 1fr 80px 1fr 1fr;align-items:en
     $('bUpi').classList.toggle('neg',state.balances.upi<0);
     $('bCard').classList.toggle('neg',state.balances.card<0);
     $('limitNote').textContent='Resets to '+inr(state.limit)+' after paying the bill';
-    renderHome();
+    renderHome();renderInsights();
   }
-  function renderHist(){
+  var hf={q:'',type:'',cat:'',app:'',from:'',to:'',min:'',max:''};
+  function nFilters(){return ['type','cat','app','from','to','min','max'].filter(function(k){return hf[k]!=='';}).length;}
+  function hfActive(){return !!hf.q||nFilters()>0;}
+  function histMatch(p){
+    var cr=!!p.type;
+    if(hf.type==='exp'&&cr)return false;
+    if(hf.type==='cr'&&!cr)return false;
+    if(hf.cat&&(cr||(p.cat||'Other')!==hf.cat))return false;
+    if(hist==='upi'&&hf.app&&p.app!==hf.app)return false;
+    if(hf.from&&p.date<hf.from)return false;
+    if(hf.to&&p.date>hf.to)return false;
+    if(hf.min!==''&&p.amount<parseFloat(hf.min))return false;
+    if(hf.max!==''&&p.amount>parseFloat(hf.max))return false;
+    if(hf.q){var hay=(p.name+' '+(p.cat||'')+' '+(p.app||'')+' '+p.amount+' '+p.date).toLowerCase();if(hay.indexOf(hf.q.toLowerCase())<0)return false;}
+    return true;
+  }
+  function openFilter(){
+    var opt=function(a,sel){return a.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===sel?' selected':'')+'>'+x[1]+'</option>';}).join('');};
+    var cats=[['','All categories']].concat(['Grocery','Food','Shopping','Fuel','Bills','Travel','Health','Other'].map(function(k){return [k,k];}));
+    var apps=[['','All UPI apps'],['BHIM','BHIM'],['PhonePe','PhonePe'],['GPay','GPay'],['Paytm','Paytm']];
+    sheet('<h2 style="margin:0">Filter</h2><label>Type</label><select id="fT">'+opt([['','All'],['exp','Expenses only'],['cr','Credits only']],hf.type)+'</select><label>Category</label><select id="fC">'+opt(cats,hf.cat)+'</select>'+(hist==='upi'?'<label>UPI app</label><select id="fA">'+opt(apps,hf.app)+'</select>':'')+'<label>From date</label><input id="fF" type="date" value="'+hf.from+'"><label>To date</label><input id="fU" type="date" value="'+hf.to+'"><label>Min amount</label><input id="fMn" type="number" inputmode="decimal" value="'+hf.min+'"><label>Max amount</label><input id="fMx" type="number" inputmode="decimal" value="'+hf.max+'"><div class="row"><button class="ghost" id="fClr" type="button">Clear</button><button class="primary" id="fOk" type="button">Apply</button></div>');
+    $('fClr').onclick=function(){hf={q:hf.q,type:'',cat:'',app:'',from:'',to:'',min:'',max:''};closeSheet();renderHist();};
+    $('fOk').onclick=function(){hf.type=$('fT').value;hf.cat=$('fC').value;hf.app=$('fA')?$('fA').value:'';hf.from=$('fF').value;hf.to=$('fU').value;hf.min=$('fMn').value;hf.max=$('fMx').value;closeSheet();renderHist();};
+  }
+  function renderHist(){$('fCnt').textContent=nFilters()?' ('+nFilters()+')':'';
     var isU=hist==='upi';
     $('hUpi').classList.toggle('on',isU);$('hCard').classList.toggle('on',!isU);
     $('hTitle').textContent=isU?'UPI payments':'Axis card payments';
-    var rows=state.payments.filter(function(p){return p.mode===hist}).sort(function(a,b){return b.date.localeCompare(a.date)||b.id-a.id});
+    var rows=state.payments.filter(function(p){return p.mode===hist}).sort(function(a,b){return b.date.localeCompare(a.date)||b.id-a.id}).filter(histMatch);
     var sum=rows.reduce(function(t,p){return p.type?t:t+p.amount},0);
     var tot={},lastM='';rows.forEach(function(p){var k=p.date.slice(0,7);if(!p.type)tot[k]=(tot[k]||0)+p.amount;});
-    $('hTotal').textContent=rows.length?(rows.length?'Grouped by month. Tap an entry to edit.':''):'';
+    $('hTotal').textContent=rows.length?(rows.length?(hfActive()?rows.length+(rows.length>1?' results':' result')+'. ':'')+'Grouped by month. Tap an entry to edit.':''):'';
     $('list').innerHTML=rows.length?rows.map(function(p){
       var mk=p.date.slice(0,7),hd='';
       if(mk!==lastM){lastM=mk;hd='<div class="mh"><span>'+new Date(mk+'-01T00:00:00').toLocaleDateString('en-IN',{month:'long',year:'numeric'})+'</span><span>'+inr(tot[mk]||0)+' spent</span></div>';}
       var d=new Date(p.date+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
       var meta=d+(p.app?' · '+esc(p.app):'')+(p.cat?' · '+esc(p.cat):'');var cr=p.type==='credit'||p.type==='bill';
       return hd+'<div class="item" data-id="'+p.id+'"><div class="av '+hist+'">'+esc(p.name.charAt(0).toUpperCase())+'</div><div class="t"><div class="n">'+esc(p.name)+'</div><div class="m">'+meta+'</div></div><div class="a'+(cr?' cr':'')+'">'+(cr?'+':'−')+inr(p.amount)+'</div>'+'<span class="chev">›</span>'+'</div>';
-    }).join(''):'<div class="empty">No '+(isU?'UPI':'card')+' payments yet. Add one from Home.</div>';
+    }).join(''):(hfActive()?'<div class="empty">No payments match your search.</div>':'<div class="empty">No '+(isU?'UPI':'card')+' payments yet. Add one from Home.</div>');
   }
   function sheet(h){$('sheet').innerHTML=h;$('dlg').classList.add('on');}
   function closeSheet(){$('dlg').classList.remove('on');}
@@ -381,13 +414,13 @@ nav{z-index:10}nav .in{grid-template-columns:1fr 1fr 80px 1fr 1fr;align-items:en
   }
   function setMode(m){mode=m;$('mUpi').classList.toggle('on',m==='upi');$('mCard').classList.toggle('on',m==='card');$('appRow').classList.toggle('hide',m!=='upi');}
   function route(){
-    var raw=location.hash.slice(1),h=raw==='history'?'history':raw==='settings'?'settings':'home';
-    ['home','history','settings'].forEach(function(s){$(s).classList.toggle('hide',h!==s)});
-    $('nHome').classList.toggle('on',h==='home'&&raw!=='insights');$('nHist').classList.toggle('on',h==='history');$('nIns').classList.toggle('on',raw==='insights');$('nSet').classList.toggle('on',h==='settings');$('mnav').style.display=h==='home'?'flex':'none';
-    $('title').textContent=h==='history'?'Payment history':h==='settings'?'Settings':'Paymentify';$('title').className=h==='home'?'wm':'';
+    var raw=location.hash.slice(1),h=raw==='history'?'history':raw==='settings'?'settings':raw==='insights'?'insights':'home';
+    ['home','history','settings','insights'].forEach(function(s){$(s).classList.toggle('hide',h!==s)});
+    $('nHome').classList.toggle('on',h==='home');$('nHist').classList.toggle('on',h==='history');$('nIns').classList.toggle('on',h==='insights');$('nSet').classList.toggle('on',h==='settings');$('mnav').style.display=(h==='home'||h==='insights')?'flex':'none';
+    $('title').textContent=h==='history'?'Payment history':h==='settings'?'Settings':h==='insights'?'Insights':'Paymentify';$('title').className=h==='home'?'wm':'';
     if(h==='history')renderHist();
     if(h==='settings'){$('sSal').value=state.balances.upi;$('sCard').value=state.balances.card;$('sLimit').value=state.limit;}
-    if(raw==='insights'&&$('charts')){$('charts').scrollIntoView();}else{window.scrollTo(0,0);}
+    window.scrollTo(0,0);
   }
 
   $('mUpi').onclick=function(){setMode('upi')};
@@ -454,6 +487,7 @@ nav{z-index:10}nav .in{grid-template-columns:1fr 1fr 80px 1fr 1fr;align-items:en
       closeSheet();applyBackup(t);
     };
   };
+  $('hq').oninput=function(){hf.q=this.value.trim();renderHist();};$('hFilter').onclick=openFilter;
   $('exportBtn').onclick=exportSheet;
   $('payBill').onclick=function(){
     var due=state.limit-state.balances.card;
@@ -473,7 +507,24 @@ nav{z-index:10}nav .in{grid-template-columns:1fr 1fr 80px 1fr 1fr;align-items:en
   var CC={Grocery:'#34d399',Food:'#fb923c',Shopping:'#f472b6',Fuel:'#facc15',Bills:'#60a5fa',Travel:'#a78bfa',Health:'#f87171',Other:'#9aa1ad'};
   var GUESS=[[/veg|grocer|milk|banana|fruit|soya|rice|atta|dal/i,'Grocery'],[/food|lunch|dinner|tea|coffee|snack|biryani|zomato|swiggy/i,'Food'],[/fuel|petrol|diesel/i,'Fuel'],[/rent|bill|recharge|wifi|electric|emi/i,'Bills'],[/cab|uber|ola|bus|train|flight/i,'Travel'],[/medic|doctor|pharma|hospital/i,'Health'],[/shop|cloth|amazon|flipkart|myntra|shirt/i,'Shopping']];
   function mLabel(ym){return new Date(ym+'-01T00:00:00').toLocaleDateString('en-IN',{month:'short',year:'numeric'});}
-  function shiftMonth(n){var y=+vm.slice(0,4),m=+vm.slice(5,7)+n;if(m<1){m=12;y--;}if(m>12){m=1;y++;}vm=y+'-'+(m<10?'0':'')+m;renderHome();}
+  function shiftMonth(n){var y=+vm.slice(0,4),m=+vm.slice(5,7)+n;if(m<1){m=12;y--;}if(m>12){m=1;y++;}vm=y+'-'+(m<10?'0':'')+m;renderHome();renderInsights();}
+  function renderInsights(){
+    function spent(ym){var s=0;state.payments.forEach(function(p){if(!p.type&&p.date.slice(0,7)===ym)s+=p.amount;});return s;}
+    var y=+vm.slice(0,4),m=+vm.slice(5,7),pm=m===1?(y-1)+'-12':y+'-'+('0'+(m-1)).slice(-2);
+    var list=state.payments.filter(function(p){return !p.type&&p.date.slice(0,7)===vm;});
+    var tot=spent(vm),prev=spent(pm),cats={};
+    list.forEach(function(p){var c=p.cat||'Other';cats[c]=(cats[c]||0)+p.amount;});
+    var top=Object.keys(cats).sort(function(a,b){return cats[b]-cats[a];})[0];
+    var nw=today(),nd=(vm===nw.slice(0,7))?+nw.slice(8,10):new Date(y,m,0).getDate();
+    var big=list.slice().sort(function(a,b){return b.amount-a.amount;});
+    var chg=prev?Math.round((tot-prev)*100/prev):null;
+    var tiles=[['Total spent',inr(tot),''],['vs last month',chg===null?'-':(chg>0?'\u25b2 ':chg<0?'\u25bc ':'')+Math.abs(chg)+'%',chg>0?'up':chg<0?'dn':''],['Daily average',inr(Math.round(tot/nd)),''],['Payments',String(list.length),''],['Top category',top||'-',''],['Biggest expense',big[0]?inr(big[0].amount):'-','']];
+    $('stats').innerHTML=tiles.map(function(t){return '<div class="st"><small>'+t[0]+'</small><b class="'+t[2]+'">'+esc(t[1])+'</b></div>';}).join('');
+    var bars=[],bmx=1;
+    for(var k=5;k>=0;k--){var bd=new Date(y,m-1-k,1),bk=bd.getFullYear()+'-'+('0'+(bd.getMonth()+1)).slice(-2),bs=spent(bk);bars.push({l:bd.toLocaleDateString('en-IN',{month:'short'}),s:bs,cur:bk===vm});if(bs>bmx)bmx=bs;}
+    $('trend').innerHTML=bars.map(function(b){return '<div class="bc"><span class="bv">'+(b.s?Math.round(b.s):'')+'</span><div class="bar" style="height:'+Math.round(b.s/bmx*90)+'px'+(b.cur?'':';opacity:.45')+'"></div><span class="bl">'+b.l+'</span></div>';}).join('');
+    $('top').innerHTML=big.length?big.slice(0,5).map(function(p){return '<div class="item"><div class="av '+p.mode+'">'+esc(p.name.charAt(0).toUpperCase())+'</div><div class="t"><div class="n">'+esc(p.name)+'</div><div class="m">'+(p.cat?esc(p.cat)+' \u00b7 ':'')+new Date(p.date+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'})+'</div></div><div class="a">\u2212'+inr(p.amount)+'</div></div>';}).join(''):'<div class="empty">No spending this month</div>';
+  }
   function renderHome(){
     $('mLbl').textContent=mLabel(vm);
     var cr=0,db=0,modes={},cats={};
